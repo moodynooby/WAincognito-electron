@@ -1,16 +1,14 @@
- 
-const { ipcRenderer } = require('electron');
+const { ipcRenderer } = require("electron");
 
-class WhatsAppInstance
-{
+class WhatsAppInstance {
 	constructor(id, name) {
 		// self
-		this.id         = id;
-		this.name       = name;
+		this.id = id;
+		this.name = name;
 		this.lastUnread = 0;
 
 		// Module Raid
-		this.mrid  = null;
+		this.mrid = null;
 		this.mrobj = {};
 
 		// Notification Wrapper
@@ -23,12 +21,9 @@ class WhatsAppInstance
 			mutations.forEach((mutation) => {
 				this.countUnread();
 
-				if (this.mrid == null)
-				{
-					if (typeof mutation.target.ariaLabel === 'string')
-					{
-						if (mutation.target.ariaLabel.search(Constants.whatsapp.profilePicture) != -1)
-							this.loadModuleRaid();
+				if (this.mrid == null) {
+					if (typeof mutation.target.ariaLabel === "string") {
+						if (mutation.target.ariaLabel.search(Constants.whatsapp.profilePicture) != -1) this.loadModuleRaid();
 					}
 				}
 			});
@@ -57,45 +52,48 @@ class WhatsAppInstance
 	loadModuleRaid() {
 		console.log("Loading Module Raid...");
 		this.mrid = Math.random().toString(36).substring(7);
-		
+
 		if (parseFloat(window.Debug.VERSION) < 2.3) {
 			window.webpackChunkwhatsapp_web_client.push([
-				[this.mrid], {}, (e) => {
+				[this.mrid],
+				{},
+				(e) => {
 					Object.keys(e.m).forEach((mod) => {
 						this.mrobj[mod] = e(mod);
-					})
-				}
+					});
+				},
 			]);
 		} else {
-			var _wai = this;
-			let modules = self.require('__debug').modulesMap;
-			Object.keys(modules).filter(e => e.includes("WA")).forEach(function (mod) {
-				let modulos = modules[mod];
-				if (modulos) {
-					_wai.mrobj[mod] = {
-						default: modulos.defaultExport,
-						factory: modulos.factory,
-						...modulos
-					};
-					if (Object.keys(_wai.mrobj[mod].default).length == 0) {
-						try {
-							self.ErrorGuard.skipGuardGlobal(true);
-							Object.assign(_wai.mrobj[mod], self.importNamespace(mod));
-						} catch (e) {}
+			const modules = self.require("__debug").modulesMap;
+			Object.keys(modules)
+				.filter((e) => e.includes("WA"))
+				.forEach((mod) => {
+					const modulos = modules[mod];
+					if (modulos) {
+						this.mrobj[mod] = {
+							default: modulos.defaultExport,
+							factory: modulos.factory,
+							...modulos,
+						};
+						if (Object.keys(this.mrobj[mod].default).length == 0) {
+							try {
+								self.ErrorGuard.skipGuardGlobal(true);
+								Object.assign(this.mrobj[mod], self.importNamespace(mod));
+							} catch (e) {}
+						}
 					}
-				}
-			});
+				});
 		}
 	}
 
 	findModule(query) {
-		let results = [];
-		let modules = Object.keys(this.mrobj);
+		const results = [];
+		const modules = Object.keys(this.mrobj);
 		modules.forEach((mKey) => {
-			let mod = this.mrobj[mKey];
-			if (typeof mod !== 'undefined') {
-				if (typeof query === 'string') {
-					if (typeof mod.default === 'object') {
+			const mod = this.mrobj[mKey];
+			if (typeof mod !== "undefined") {
+				if (typeof query === "string") {
+					if (typeof mod.default === "object") {
 						for (const key in mod.default) {
 							if (key == query) results.push(mod);
 						}
@@ -103,27 +101,25 @@ class WhatsAppInstance
 					for (const key in mod) {
 						if (key == query) results.push(mod);
 					}
-				}
-				else if (typeof query === 'function') {
+				} else if (typeof query === "function") {
 					if (query(mod)) {
 						results.push(mod);
 					}
-				}
-				else {
-					throw new TypeError('findModule can only find via string and function, ' + (typeof query) + ' was passed');
+				} else {
+					throw new TypeError("findModule can only find via string and function, " + typeof query + " was passed");
 				}
 			}
 		});
 		return results;
 	}
 
-	async openChat (tag) {
+	async openChat(tag) {
 		//console.log("openChat tag", tag);
 
-		let chatWid = this.findModule('createWid')[0].createWid(tag);
+		const chatWid = this.findModule("createWid")[0].createWid(tag);
 		//console.log("openChat chatWid", chatWid);
 
-		let chat    = await this.findModule(m => m.default && m.default.Chat)[0].default.Chat.find(chatWid);
+		const chat = await this.findModule((m) => m.default && m.default.Chat)[0].default.Chat.find(chatWid);
 		//console.log("openChat chat", chat);
 
 		/* To Debug on Browser
@@ -133,62 +129,61 @@ class WhatsAppInstance
 		*/
 
 		//await this.findModule("Cmd")[0].Cmd.openChatBottom(chat);
-		await this.findModule("Cmd")[0].Cmd.openChatBottom({chat: chat});
+		await this.findModule("Cmd")[0].Cmd.openChatBottom({ chat: chat });
 	}
 
 	countUnread() {
-		let unread  = 0;
-		let chats   = 0;
+		let unread = 0;
+		let chats = 0;
 		const itens = document.getElementsByTagName("span");
-		for (const item of itens)
-		{
-			if (item.hasAttributes())
-			{
-				for (const attr of item.attributes)
-				{
-					if (attr.name == "aria-label" && (attr.value == Constants.whatsapp.unreadText || attr.value.search(Constants.whatsapp.unreadTextSearch) != -1))
-					{
+		for (const item of itens) {
+			if (item.hasAttributes()) {
+				for (const attr of item.attributes) {
+					if (
+						attr.name == "aria-label" &&
+						(attr.value == Constants.whatsapp.unreadText ||
+							attr.value.search(Constants.whatsapp.unreadTextSearch) != -1)
+					) {
 						unread += parseInt(item.innerText);
-						chats  += 1;
+						chats += 1;
 					}
 				}
 			}
 		}
 
-		if (this.lastUnread != unread)
-		{
+		if (this.lastUnread != unread) {
 			this.lastUnread = unread;
-			chats           = chats > 0 ? chats - 1 : chats;
-			
-			ipcRenderer.send(Constants.event.updateUnreadMessages, {id: this.id, unread: unread - chats});
+			chats = chats > 0 ? chats - 1 : chats;
+
+			ipcRenderer.send(Constants.event.updateUnreadMessages, {
+				id: this.id,
+				unread: unread - chats,
+			});
 		}
 	}
 }
 
-class NotificationServer
-{
-	constructor(title, options)
-	{
+class NotificationServer {
+	constructor(title, options) {
 		//console.log("New NotificationServer...", title, options);
 		this._processOptions(title, options);
 	}
 
-	async _processOptions(title, options)
-	{
+	async _processOptions(title, options) {
 		options.icon = options.icon.replace(Constants.whatsapp.url, "").replace("%3F", "?");
-		const serverNotification = JSON.parse(JSON.stringify({
-            id: wa.getId(),
-			title: title,
-			options: options,
-			icon: await this._getIcon(options.icon)
-		}));
+		const serverNotification = JSON.parse(
+			JSON.stringify({
+				id: wa.getId(),
+				title: title,
+				options: options,
+				icon: await this._getIcon(options.icon),
+			})
+		);
 		ipcRenderer.send(Constants.event.newRendererNotification, serverNotification);
 	}
 
-	_getIcon(icon)
-	{
-		if (!icon)
-			return;
+	_getIcon(icon) {
+		if (!icon) return;
 
 		return new Promise((resolve, reject) => {
 			fetch(icon)
@@ -203,14 +198,14 @@ class NotificationServer
 	}
 
 	// wrapper compatibility
-	static permission = 'granted';
+	static permission = "granted";
 	static maxActions = 3;
 	static requestPermission(callback) {
 		return new Promise((resolve, reject) => {
-			if(typeof callback === 'function') {
-				callback('granted');
+			if (typeof callback === "function") {
+				callback("granted");
 			}
-			resolve('granted');
+			resolve("granted");
 		});
 	}
 
@@ -219,43 +214,39 @@ class NotificationServer
 
 // Events
 let Constants = {};
-let wa        = null;
+let wa = null;
 
 ipcRenderer.on("init-whatsapp-instance", (event, data) => {
 	console.log(`BrowserView ID: ${data.id} / Name: ${data.name}`);
 	Constants = data.constants;
-	
+
 	// Check if whatsapp is calling google update
-	const titleEl = document.querySelector('.landing-title');
-	const isUpdate = titleEl && titleEl.innerHTML.includes('Google Chrome');
-	
-	if (isUpdate)
-	{
+	const titleEl = document.querySelector(".landing-title");
+	const isUpdate = titleEl && titleEl.innerHTML.includes("Google Chrome");
+
+	if (isUpdate) {
 		console.warn("Page requested chrome update...");
-		
+
 		navigator.serviceWorker.getRegistrations().then((regs) => {
 			console.log("Unregistering ServiceWorkers...");
-			
-			for (const reg of regs)
-				reg.unregister();
-				
-			if ('serviceWorker' in navigator) {
-				caches.keys().then(function (cacheNames) {
-					cacheNames.forEach(function (cacheName) {
+
+			for (const reg of regs) reg.unregister();
+
+			if ("serviceWorker" in navigator) {
+				caches.keys().then((cacheNames) => {
+					cacheNames.forEach((cacheName) => {
 						console.log("Clearing Cache Key: ", cacheName);
 						caches.delete(cacheName);
 					});
 				});
 			}
-			
+
 			console.log("Requesting reload to main process...");
 			setTimeout(() => {
 				ipcRenderer.send(Constants.event.clearWorkersAndReload, data.id);
 			}, 1000);
 		});
-	}
-	else
-	{
+	} else {
 		console.log(`Starting new WhatsAppInstance...`);
 		wa = new WhatsAppInstance(data.id, data.name);
 		window.wa = wa;
