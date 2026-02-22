@@ -26,8 +26,17 @@
           <h5 class="pt-3 fw-bolder">Accounts</h5>
         </div>
         <div>
-          <button type="button" class="btn fs-4 acct-add" title="Add Account" data-bs-toggle="modal" data-bs-target="#accountModal" data-bs-action="new"><i class="bi bi-person-fill-add"></i></button>
+          <button type="button" class="btn fs-4 acct-add me-2" title="Add Account" data-bs-toggle="modal" data-bs-target="#accountModal" data-bs-action="new"><i class="bi bi-person-fill-add"></i></button>
+          <button type="button" class="btn fs-4" title="Check for Updates" id="check-updates-btn"><i class="bi bi-arrow-repeat"></i></button>
         </div>
+      </div>
+
+      <div id="update-alert" class="alert alert-info m-auto mt-2 w-100 d-none" role="alert">
+        <span id="update-message"></span>
+      </div>
+
+      <div class="m-auto mt-2 w-100 text-end">
+        <small class="text-muted" id="version-display">Version: -</small>
       </div>
 
       <table class="table m-auto mt-3 text-center w-100">

@@ -1,0 +1,4 @@
+# Ignore extension contents but keep directory
+*
+# Except this file
+!.gitignore

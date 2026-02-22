@@ -53,5 +53,9 @@ ipcRenderer.on("init-resources", (event, data) => {
 		deleteAccount: (id) => ipcRenderer.send(Constants.event.deleteAccount, id),
 		gotoAccount: (id) => ipcRenderer.send(Constants.event.gotoAccount, id),
 		reloadAccounts: (callback) => ipcRenderer.on(Constants.event.reloadAccounts, callback),
+		checkForUpdates: () => ipcRenderer.invoke(Constants.event.checkForUpdates),
+		getUpdateStatus: () => ipcRenderer.invoke(Constants.event.getUpdateStatus),
+		toggleIncognito: (id) => ipcRenderer.invoke(Constants.event.toggleIncognito, id),
+		onUpdateStatus: (callback) => ipcRenderer.on(Constants.event.updateStatus, callback),
 	});
 });
