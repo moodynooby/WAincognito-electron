@@ -21,7 +21,8 @@
     "lint": "biome check ./src",
     "lint:fix": "biome check --write ./src",
     "format": "biome format --write ./src",
-    "check": "biome check ./src"
+    "check": "biome check ./src",
+    "download:extension": "node scripts/download-extension.js"
   },
   "build": {
     "linux": {
@@ -34,7 +35,8 @@
       ],
       "asarUnpack": [
         "**/assets/*.svg",
-        "**/assets/*.png"
+        "**/assets/*.png",
+        "**/src/extensions/**/*"
       ]
     },
     "win": {
@@ -46,7 +48,8 @@
       ],
       "asarUnpack": [
         "**/assets/*.svg",
-        "**/assets/*.png"
+        "**/assets/*.png",
+        "**/src/extensions/**/*"
       ]
     }
   },

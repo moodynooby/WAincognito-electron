@@ -13,6 +13,8 @@ const {
 const Store = require("electron-store");
 const path = require("node:path");
 const fs = require("node:fs");
+const { ExtensionManager } = require("./extension-manager");
+const { UpdateChecker } = require("./update-checker");
 
 // Single Electron Instance
 if (!app.requestSingleInstanceLock()) {
@@ -23,6 +25,8 @@ if (!app.requestSingleInstanceLock()) {
 class WhatsAppElectron {
 	constructor() {
 		this.store = new Store();
+		this.extensionManager = new ExtensionManager();
+		this.updateChecker = new UpdateChecker(this.extensionManager);
 		this.baseIcon = !app.isPackaged
 			? path.join(__dirname, "../assets/whatsapp-icon-512x512.png")
 			: path.join(process.resourcesPath, "app.asar.unpacked/assets/whatsapp-icon-512x512.png");
@@ -131,6 +135,11 @@ class WhatsAppElectron {
 		Menu.setApplicationMenu(this.menu);
 
 		if (this.accounts.length > 0) this.setCurrentViewByIdx(0);
+
+		// Check for updates in background
+		this.updateChecker.checkForUpdates(true).catch((e) => {
+			console.error("Update check failed:", e.message);
+		});
 
 		const menu = Menu.buildFromTemplate([
 			{
@@ -298,6 +307,50 @@ class WhatsAppElectron {
 			//console.log("From Renderer - gotoAccount", id);
 			this.setCurrentView(id);
 		});
+
+		ipcMain.handle(Constants.event.checkForUpdates, async () => {
+			const results = await this.updateChecker.checkForUpdates(false);
+			return results;
+		});
+
+		ipcMain.handle(Constants.event.getUpdateStatus, async () => {
+			const extVersion = this.extensionManager.getCurrentVersion();
+			return {
+				extension: {
+					current: extVersion || Constants.extension.version,
+					enabled: Constants.extension.enabled,
+				},
+				app: {
+					current: Constants.version,
+				},
+			};
+		});
+
+		ipcMain.handle(Constants.event.toggleIncognito, async (event, id) => {
+			if (!this.instances[id]) {
+				return { success: false, error: "Account not found" };
+			}
+
+			const ses = session.fromPartition(`persist:${id}`);
+
+			if (Constants.extension.enabled) {
+				const result = await this.extensionManager.loadExtensionForSession(ses);
+				if (result.success) {
+					const bv = this.instances[id].view;
+					bv.webContents.reload();
+					setTimeout(() => {
+						bv.webContents.send(Constants.event.initWhatsAppInstance, {
+							id: bv._id,
+							name: bv._name,
+							constants: Constants,
+						});
+					}, 1000);
+				}
+				return result;
+			}
+
+			return { success: false, error: "Extension not enabled" };
+		});
 	}
 
 	createWindow() {
@@ -365,6 +418,15 @@ class WhatsAppElectron {
 		view._name = name;
 
 		view.setBackgroundColor("white");
+
+		// Load extension into the session before loading URL
+		if (Constants.extension.enabled) {
+			const ses = session.fromPartition(`persist:${id}`);
+			this.extensionManager.loadExtensionForSession(ses).catch((e) => {
+				console.error("Failed to load extension:", e.message);
+			});
+		}
+
 		view.webContents.loadURL(Constants.whatsapp.url, {
 			userAgent: Constants.whatsapp.userAgent,
 		});

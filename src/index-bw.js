@@ -52,8 +52,46 @@ const init = async () => {
 			setAccounts(accounts);
 		});
 	});
+
+	// Load and display version info
+	window.electron.getUpdateStatus().then((status) => {
+		const extStatus = status.extension.enabled ? "Incognito: ON" : "Incognito: OFF";
+		$("#version-display").html(`v${status.app.current} | ${extStatus}`);
+	});
 };
+
 init();
+
+// Update check button handler
+$("#check-updates-btn").on("click", async () => {
+	$("#check-updates-btn").prop("disabled", true).addClass("loading");
+	$("#update-alert").addClass("d-none");
+
+	try {
+		const result = await window.electron.checkForUpdates();
+
+		const messages = [];
+		if (result.app.updateAvailable) {
+			messages.push(`App: ${result.app.current} → ${result.app.latest}`);
+		}
+		if (result.extension.updateAvailable) {
+			messages.push(`Extension: ${result.extension.current} → ${result.extension.latest}`);
+		}
+
+		if (messages.length > 0) {
+			$("#update-message").html("Update available:<br>" + messages.join("<br>"));
+			$("#update-alert").removeClass("d-none alert-info").addClass("alert-warning");
+		} else {
+			$("#update-message").html("You are running the latest versions!");
+			$("#update-alert").removeClass("d-none alert-warning").addClass("alert-success");
+		}
+	} catch (e) {
+		$("#update-message").html("Failed to check for updates: " + e.message);
+		$("#update-alert").removeClass("d-none alert-info alert-success").addClass("alert-danger");
+	} finally {
+		$("#check-updates-btn").prop("disabled", false).removeClass("loading");
+	}
+});
 
 $("#accountModal").on("show.bs.modal", (event) => {
 	const button = event.relatedTarget;

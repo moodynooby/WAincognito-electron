@@ -33,11 +33,15 @@ Constants.event.deleteAccount = "delete-account";
 Constants.event.gotoAccount = "goto-account";
 Constants.event.reloadAccounts = "reload-accounts";
 Constants.event.toggleIncognito = "toggle-incognito";
+Constants.event.checkForUpdates = "check-for-updates";
+Constants.event.updateStatus = "update-status";
+Constants.event.getUpdateStatus = "get-update-status";
 
 Constants.extension = {
 	enabled: true,
 	path: path.join(__dirname, "extensions/wa-incognito"),
 	version: "2.4.1",
+	repo: "tomer8007/whatsapp-web-incognito",
 };
 
 const init = (lang) => {
